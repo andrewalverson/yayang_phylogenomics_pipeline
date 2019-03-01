@@ -21,12 +21,13 @@ def mask_monophyletic_tips(curroot,unamb_chrDICT):
 	going = True
 	while going and len(curroot.leaves()) >= 4:
 		going = False
-		for node in curroot.iternodes(): #walk through nodes
-			if not node.istip: continue #only look at tips
+		for node in curroot.iternodes(): # walk through nodes
+			if not node.istip: continue  # only look at tips
 			for sister in node.get_sisters():
-				if sister.istip and get_name(node.label)==get_name(sister.label): #masking
-					#print node.label,unamb_chrDICT[node.label],sister.label,unamb_chrDICT[sister.label]
-					if unamb_chrDICT[node.label] > unamb_chrDICT[sister.label]:
+				# parse taxon names from the tip labels the check whether taxon names are the same (i.e., sister tips from the same taxon)
+				if sister.istip and get_name(node.label)==get_name(sister.label): # masking
+					# print node.label,unamb_chrDICT[node.label],sister.label,unamb_chrDICT[sister.label]
+					if unamb_chrDICT[node.label.replace("'","")] > unamb_chrDICT[sister.label.replace("'","")]: # added code to remove single quotes from labels
 						node = sister.prune()			
 					else: node = node.prune()
 					if len(curroot.leaves()) >= 4:
@@ -47,7 +48,7 @@ def mask_paraphyletic_tips(curroot,unamb_chrDICT):
 				continue #no paraphyletic tips for the root
 			for para in parent.get_sisters():
 				if para.istip and get_name(node.label)==get_name(para.label):
-					if unamb_chrDICT[node.label] > unamb_chrDICT[para.label]:
+					if unamb_chrDICT[node.label.replace("'","")] > unamb_chrDICT[para.label.replace("'","")]: # added code to remove single quotes from labels
 						node = para.prune()
 					else: node = node.prune()
 					if len(curroot.leaves()) >= 4:
@@ -64,7 +65,7 @@ def main(treDIR,clnDIR,para,intree_file_ending=INTREE_FILE_ENDING):
 	mask_para = True if para == "y" else False
 	filecount = 0
 	
-	filematch = {} #key is clusterID, value is the .aln-cln file
+	filematch = {} # key = clusterID, value = the .aln-cln file
 	for i in os.listdir(clnDIR):
 		if i.endswith(".aln-cln"):
 			clusterID = get_clusterID(i)
@@ -72,22 +73,40 @@ def main(treDIR,clnDIR,para,intree_file_ending=INTREE_FILE_ENDING):
 				"The clusterID "+clusterID+" repeats in "+clnDIR
 			filematch[clusterID] = i
 			
+	# loop over all the tree files
 	for i in os.listdir(treDIR):
+		# only deal with files that have the right file extension
 		if i.endswith(intree_file_ending):
+			# print filename for this tree
+			print i
+
+			# get clusterID, which is the base file name that connects the tree file with its alignment
+			clusterID = get_clusterID(i)
+			print clusterID
+
+			# open and parse tree file
 			with open(treDIR+i,"r") as infile:
 				intree = newick3.parse(infile.readline())
-			print i
-			clusterID = get_clusterID(i)
+			
 			filecount += 1
-			chrDICT = {} #key is seqid, value is number of unambiguous chrs
+
+			# key = seqid (the entire tip label = taxon ID + sequence info), value = number of unambiguous chrs
+			chrDICT = {} 
+
+			# read FASTA file for this tree
 			for s in read_fasta_file(clnDIR+filematch[clusterID]):
+				# remove non-sequence characters
 				for ch in ['-','X',"x","?","*"]:
 					s.seq = s.seq.replace(ch,"") #ignore gaps, xs and Xs
 				chrDICT[s.name] = len(s.seq)
+	# get rid of single quotes surrounding taxon name - AJA added
+	
+
 			curroot = mask_monophyletic_tips(intree,chrDICT)
 			if mask_para: curroot = mask_paraphyletic_tips(curroot,chrDICT)
 			with open(treDIR+i+".mm","w") as outfile:
 				outfile.write(newick3.tostring(curroot)+";\n")
+
 	assert filecount > 0, \
 		"No file ends with "+intree_file_ending+" found in "+treDIR
 	
