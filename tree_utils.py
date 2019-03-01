@@ -1,10 +1,36 @@
 import phylo3,newick3
 import os,sys
+import re
 
 def get_name(label):
 	"""Get taxonID from a tip label"""
-	return label.split("@")[0]
-	#return (label.split("@")[0]).split("_")[0]
+
+	# get rid of single quotes surrounding taxon name
+	label = label.replace("'","")
+
+	# split labels as they appear in our dataset
+
+	rnaseq_re = re.compile("(\S+)_TRINITY_\S+$")
+	genome_re = re.compile("(\S+)_genome_\S+$") # not sure if I have any of these
+	nitz4     = re.compile("Nitzschia_sp_Nitz4")
+
+	rnaseq_match = re.match(rnaseq_re, label)
+	nitz4_match  = re.match(nitz4, label)
+
+	if rnaseq_match:
+		# print "rnaseq:", rnaseq_match.group(1), label
+		return rnaseq_match.group(1)
+	elif nitz4_match:
+		print "nitz4:", "Nitzschia_sp_Nitz4", label
+		return "Nitzschia_sp_Nitz4"
+	else:
+		# this is going to be most or all of the remaining genome taxa
+		# print "other:", label.split("_")[0], label
+		return label.split("_")[0]
+		
+	# print label.split("@")[0]
+	# return label.split("@")[0] # AJA commented
+	# return (label.split("@")[0]).split("_")[0]
 	
 def get_clusterID(filename):
 	return filename.split(".")[0]
