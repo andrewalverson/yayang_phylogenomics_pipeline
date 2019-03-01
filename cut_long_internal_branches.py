@@ -87,7 +87,7 @@ def main(inDIR,file_ending,branch_len_cutoff,min_taxa,outDIR):
 						with open(outDIR+i.split(".")[0]+"_"+str(count)+".subtree","w") as outfile:
 							outfile.write(newick3.tostring(subtree)+";\n")
 						outsizes += str(len(subtree.leaves()))+", "
-				print count,"tree(s) wirtten. Sizes:",outsizes
+				print count,"tree(s) written. Sizes:",outsizes, "\n"
 	assert filecount > 0, "No file end with "+file_ending+" in "+inDIR
 			
 		
